@@ -3,6 +3,11 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    public bool lastfaceright = true;
+    public GameObject ground;
+
+    //public bool IsTouching()
+
     public enum FacingDirection
     {
         left, right
@@ -17,6 +22,7 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        IsGrounded();
         //The input from the player needs to be determined and
         // then passed in the to the MovementUpdate which should
         // manage the actual movement of the character.
@@ -67,7 +73,18 @@ public class PlayerController : MonoBehaviour
     }
     public bool IsGrounded()
     {
-        return false;
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb.IsTouching(ground.GetComponent<CompositeCollider2D>()))
+        {
+            
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+
+           
     }
 
     public FacingDirection GetFacingDirection()
@@ -75,15 +92,26 @@ public class PlayerController : MonoBehaviour
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
         if ((rb.linearVelocity.x > 0) && rb.linearVelocity.x>.1f)
         {
+            lastfaceright = true;
             return FacingDirection.right;
         }
         else if ((rb.linearVelocity.x < 0) && rb.linearVelocity.x < -.1f)
         {
+            lastfaceright = false;
             return FacingDirection.left;
         }
         else
         {
-            return FacingDirection.right;
+
+           if(lastfaceright)
+            {
+                return FacingDirection.right;
+            }
+
+           else
+            {
+                return FacingDirection.left;
+            }
         }
 
     }
