@@ -5,6 +5,11 @@ public class PlayerController : MonoBehaviour
 {
     public bool lastfaceright = true;
     public GameObject ground;
+    public float gravity;
+    public Vector3 Velocity;
+    public float apexHeight;
+    public float apexTime;
+    public float jumpvel;
 
     //public bool IsTouching()
 
@@ -16,7 +21,8 @@ public class PlayerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+        gravity = -2 * apexHeight / (apexTime*apexTime);
+        jumpvel = 2 * apexHeight / apexTime;
     }
 
     // Update is called once per frame
@@ -27,6 +33,13 @@ public class PlayerController : MonoBehaviour
         // then passed in the to the MovementUpdate which should
         // manage the actual movement of the character.
         Vector2 playerInput = new Vector2();
+
+
+        if(Input.GetKeyDown(KeyCode.UpArrow) && (IsGrounded() == true))
+        {
+            playerInput.y = 1f;
+            //Jumpingmotion(playerInput);
+        }
 
         if (Input.GetKey(KeyCode.LeftArrow))
         {
@@ -42,14 +55,33 @@ public class PlayerController : MonoBehaviour
         {
             playerInput.x = 0;
         }
+
+        //if (Input.GetKeyDown(KeyCode.UpArrow) == false)
+        //{
+        //    playerInput.y = 0;
+        //}
+
         //Debug.Log(playerInput.x)
 ;        MovementUpdate(playerInput);
     }
 
+        
+
     private void MovementUpdate(Vector2 playerInput)
     {
-        Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        rb.AddForce(playerInput, ForceMode2D.Force);
+        if (IsGrounded() && playerInput.y == 1)
+        {
+            Velocity.y = jumpvel;
+
+        }
+        else if (!IsGrounded())
+        {
+            Velocity.y += gravity * Time.deltaTime;
+        }
+        else { Velocity.y = 0f; }
+        transform.position += Velocity*Time.deltaTime;
+        //    Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        //rb.AddForce(playerInput, ForceMode2D.Force);
         
 
     }
