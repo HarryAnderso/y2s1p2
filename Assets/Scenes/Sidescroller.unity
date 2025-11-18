@@ -1797,8 +1797,12 @@ MonoBehaviour:
   gravity: 0
   Velocity: {x: 0, y: 0, z: 0}
   apexHeight: 4
-  apexTime: 1
+  apexTime: 2
   jumpvel: 0
+  groundcheck: 0
+  terminalvelocity: -3
+  coyotetimer: 0
+  coyotetime: 0
 --- !u!4 &1433354315
 Transform:
   m_ObjectHideFlags: 0
