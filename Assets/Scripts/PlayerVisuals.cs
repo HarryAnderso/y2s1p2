@@ -8,6 +8,7 @@ public class PlayerVisuals : MonoBehaviour
 
     private readonly int isWalkingHash = Animator.StringToHash("IsWalking");
     private readonly int isGroundedHash = Animator.StringToHash("IsGrounded");
+    private readonly int dieTriggerHash = Animator.StringToHash("Isdead");
 
     void Update()
     {

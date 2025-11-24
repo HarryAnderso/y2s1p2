@@ -14,6 +14,8 @@ public class PlayerController : MonoBehaviour
     public float terminalvelocity;
     public float coyotetimer;
     public float coyotetime;
+    public float runspeed;
+    public float friction;
 
     //public bool IsTouching()
 
@@ -42,13 +44,15 @@ public class PlayerController : MonoBehaviour
         if(Input.GetKeyDown(KeyCode.UpArrow) && (IsGrounded() == true))
         {
             playerInput.y = 1f;
+            //Vector3 offset = new Vector3(0, .4f, 0);
+            //transform.position += offset;
             //Jumpingmotion(playerInput);
         }
 
         if (Input.GetKeyDown(KeyCode.UpArrow) && (IsGrounded() == false))
         {
             //playerInput.y = 1f;
-            //Debug.Log("Failed jump");
+            Debug.Log("Failed jump");
             //Jumpingmotion(playerInput);
         }
 
@@ -73,11 +77,13 @@ public class PlayerController : MonoBehaviour
         //}
 
         //Debug.Log(playerInput.x)
-        ;        MovementUpdate(playerInput);
+        //there was a ; right below here for whatever reason
+        MovementUpdate(playerInput);
         if (Input.GetKeyDown(KeyCode.UpArrow) == false)
         {
             playerInput.y = 0;
         }
+
     }
 
         
@@ -99,26 +105,44 @@ public class PlayerController : MonoBehaviour
 
         else if (!IsGrounded())
         {
-            Debug.Log("Before: " + Velocity.y);
+            //Debug.Log("Before: " + Velocity.y);
 
 
             Velocity.y += gravity * Time.deltaTime;
 
 
-            Debug.Log("After: " + Velocity.y);
+            //Debug.Log("After: " + Velocity.y);
             if (Velocity.y < terminalvelocity)
             {
                 Velocity.y = terminalvelocity;
             }
         }
-        else if (IsGrounded())
-        { Velocity.y = 0f; }
-        transform.position += Velocity*Time.deltaTime;
+
+        //Problem Code
+        else if (IsGrounded() && playerInput.y ==0 && Velocity.y<0)
+        { 
+            Velocity.y = 0f;
+        }
+
+        if (playerInput.x != 0)
+        {
+            Velocity.x = runspeed * playerInput.x;
+        }
+        else if (playerInput.x == 0 && Velocity.x != 0)
+        {
+            Velocity.x -= (friction * (Velocity.x / Mathf.Abs(Velocity.x)) * Time.deltaTime);
+
+            if (Mathf.Abs(Velocity.x) < 0.2f)
+            {
+                Velocity.x = 0;
+            }
+        }
+            transform.position += Velocity * Time.deltaTime;
         //    Rigidbody2D rb = GetComponent<Rigidbody2D>();
         //rb.AddForce(playerInput, ForceMode2D.Force);
         
 
-    }
+        }
 
     public bool IsWalking()
     {
@@ -159,12 +183,22 @@ public class PlayerController : MonoBehaviour
     public FacingDirection GetFacingDirection()
     {
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        if ((rb.linearVelocity.x > 0) && rb.linearVelocity.x>.1f)
+        //if ((rb.linearVelocity.x > 0) && rb.linearVelocity.x>.1f)
+        //{
+        //    lastfaceright = true;
+        //    return FacingDirection.right;
+        //}
+        if (Velocity.x>0)
         {
             lastfaceright = true;
             return FacingDirection.right;
         }
-        else if ((rb.linearVelocity.x < 0) && rb.linearVelocity.x < -.1f)
+        //else if ((rb.linearVelocity.x < 0) && rb.linearVelocity.x < -.1f)
+        //{
+        //    lastfaceright = false;
+        //    return FacingDirection.left;
+        //}
+        else if (Velocity.x<0)
         {
             lastfaceright = false;
             return FacingDirection.left;
