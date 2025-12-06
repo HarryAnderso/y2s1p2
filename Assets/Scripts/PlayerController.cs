@@ -20,6 +20,9 @@ public class PlayerController : MonoBehaviour
     public float coyotetime;
     public Boolean walljump;
     public Boolean walljumpcapacity;
+    public Vector2 bouncevector;
+    public Boolean bounced;
+    public float bouncetimer;
     [Header("Walk properties")]
     public float acceleration;
     public float accelerationtime;
@@ -45,9 +48,10 @@ public class PlayerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        //uses the public floats to determine jump properties
         gravity = -2 * apexHeight / (apexTime*apexTime);
         jumpvel = 2 * apexHeight / apexTime;
-
+        //same but for horizontal movement
         acceleration = maxspeed/accelerationtime;
         deacceleration = maxspeedtime/deaccelerationtime;
         truemaxspeed = maxspeed;
@@ -63,44 +67,40 @@ public class PlayerController : MonoBehaviour
         // manage the actual movement of the character.
         Vector2 playerInput = new Vector2();
 
-
+        //basic jump from the ground
         if(Input.GetKeyDown(KeyCode.UpArrow) && (IsGrounded() == true))
         {
             playerInput.y = 1f;
-            //Vector3 offset = new Vector3(0, .4f, 0);
-            //transform.position += offset;
-            //Jumpingmotion(playerInput);
         }
-
+        //for when the player jumps while not grounded
         if (Input.GetKeyDown(KeyCode.UpArrow) && (IsGrounded() == false))
         {
             playerInput.y = 1f;
-            //Debug.Log("Failed jump");
-            //Jumpingmotion(playerInput);
         }
-
+        //for when the player moves left
         if (Input.GetKey(KeyCode.LeftArrow))
         {
             playerInput.x = -1f;
         }
-
+        //for when the player moves right
         if (Input.GetKey(KeyCode.RightArrow))
         {
             playerInput.x = 1f;
         }
-        if (playerInput.y != 0) Debug.Log(playerInput.y);
-
-        if (Input.GetKey(KeyCode.LeftArrow) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (dashtime == 1))
+        //checks for when the player wishes to dash left
+        if (Input.GetKey(KeyCode.LeftArrow) && (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (dashtime == 1))
         {
+            //normally dashtime is equal to 1, dashing time determines for long long the player gets incresed movement
             dashtime = dashingtime;
             //maxspeed = maxspeed * dashtime;
             Velocity.x = Velocity.x * 5;
             playerInput.x = -1f;
             dashing = true;
         }
-
-        if (Input.GetKey(KeyCode.RightArrow) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (dashtime == 1))
+        //for when the player wants to dash right
+        if (Input.GetKey(KeyCode.RightArrow) && (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (dashtime == 1))
         {
+            //normally dashtime is equal to 1, dashing time determines for long long the player gets incresed movement
             dashtime = dashingtime;
             //maxspeed = maxspeed * dashtime;
             Velocity.x = Velocity.x * 5;
@@ -114,26 +114,22 @@ public class PlayerController : MonoBehaviour
 
 
 
-
+        //resets player horizontal input
         if (((Input.GetKey(KeyCode.LeftArrow) == false) && (Input.GetKey(KeyCode.RightArrow) == false)))
         {
             playerInput.x = 0;
         }
 
-        //if(Velocity.y!=0)
-        //{
-        //    Debug.Log(Velocity.y);
-        //}
-
-        //Debug.Log(playerInput.x)
-        //there was a ; right below here for whatever reason
+        //calls the movement update with any changes in player input
         MovementUpdate(playerInput);
+        //resets player verticle input
         if (Input.GetKeyDown(KeyCode.UpArrow) == false)
         {
             playerInput.y = 0;
         }
-
+        //counts down dashtime by time passed between each frame
         if(dashtime>1) dashtime -= Time.deltaTime;
+        //resets dash time
         if (dashtime < 1)
         {
             dashing = false;
@@ -141,7 +137,33 @@ public class PlayerController : MonoBehaviour
             maxspeed = truemaxspeed;
         }
         
-
+        //resets player gravity when the player has already bounced
+        if(!bounced)
+        {
+            Rigidbody2D rb = GetComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
+        }
+       //used to reset the bounce vector amounts
+        if(bounced)
+        {
+            bouncevector = Vector3.zero;
+        }
+        //starts a cooldown for the bounce timer. this is nessecary to ensure the player doesnt bounce infinitly
+        if (bounced && IsGrounded())
+        {
+            bouncetimer += Time.deltaTime;
+        }
+        // resets the bounce timer if the player is no longer grounded
+        if (bounced && !IsGrounded())
+        {
+            bouncetimer = 0;
+        }
+        //restes the bounce timer if the player has stayed grounded for long enough. while this should technicly be determined by a public variable, any number lower then this has led to issues with infinite bouncing, hence why its a static number
+        if (bouncetimer > .75f)
+        {
+            bounced = false;
+            bouncetimer = 0;
+        }
 
     }
 
@@ -149,43 +171,53 @@ public class PlayerController : MonoBehaviour
 
     private void MovementUpdate(Vector2 playerInput)
     {
+        //interperts a jump
         if (IsGrounded() && playerInput.y == 1)
         {
-
             Velocity.y = jumpvel;
-            //Debug.Log("Reference: " + jumpvel + " Against: " + Velocity.y);
-
         }
+        //allows for a jump during coyote time
         else if (coyotetimer<coyotetime && playerInput.y == 1)
         {
             Velocity.y = jumpvel;
         }
-
+        //checks that the player is not grounded, within the vacinity of a wall, has not done a wall jump so far, and the player is inputting a jump key
         else if(!IsGrounded() && walljumpcapacity && walljump && playerInput.y==1)
         {
-            Debug.Log("Wall JUMP!");
             Velocity.y = jumpvel;
+            //prevents a player from preforming multiple wall jumps without touching the ground
             walljump = false;
         }
 
         else if (!IsGrounded())
         {
-            //Debug.Log("Before: " + Velocity.y);
-
-
+            //downwards movement acting against a airborne player
             Velocity.y += gravity * Time.deltaTime;
-
-
-            //Debug.Log("After: " + Velocity.y);
             if (Velocity.y < terminalvelocity)
             {
+                //sets the downwards movement of the player to the terminal velocity
                 Velocity.y = terminalvelocity;
             }
         }
 
-        //Problem Code
         else if (IsGrounded() && playerInput.y == 0 && Velocity.y < 0)
         {
+            //checks if the player has bounced, and is going fast enough to bounce
+            if(Velocity.y<(-terminalvelocity/2) && !bounced)
+            {
+                Rigidbody2D rb = GetComponent<Rigidbody2D>();
+                bouncevector = Velocity;
+                bouncevector.y = (bouncevector.y/2) * -1;
+                //before I added this line, you could stack dashing and bouncing to go crazy fast horizontally
+                bouncevector.x = 0;
+                //prevents the player from just resuming their downwards momentum
+                Velocity.y = 0;
+                rb.AddForce(bouncevector, ForceMode2D.Impulse);
+                //prevents further bouncing until the timer is completed
+                bounced = true;
+
+            }
+
             Velocity.y = 0f;
         }
 
@@ -205,17 +237,17 @@ public class PlayerController : MonoBehaviour
                 Velocity.x = 0;
             }
         }
+        //I dont entierly know if this code works, but it was a attempt at fixing a issue I had with early movement
         if (Velocity.x == float.NaN) Velocity.x = 0;
-
+        //updates the position of the player 
             transform.position += Velocity * Time.deltaTime;
-        //    Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        //rb.AddForce(playerInput, ForceMode2D.Force);
         
 
         }
 
     public bool IsWalking()
     {
+        //next two if statements check if the player is moving for the animator
         if (Input.GetKey(KeyCode.LeftArrow))
         {
             return true;
@@ -225,7 +257,7 @@ public class PlayerController : MonoBehaviour
         {
             return true;
         }
-
+        //tells the animator the player is currently idle
         else
         {
             return false;
@@ -233,6 +265,7 @@ public class PlayerController : MonoBehaviour
     }
     public bool IsGrounded()
     {
+        //the rigidbody  encompases the whole body, while the poly collider only encompases the feet, so it can check for groundesness without interacting with walls/roofs
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
         PolygonCollider2D pb = GetComponent<PolygonCollider2D>();
         //if (rb.IsTouching(ground.GetComponent<CompositeCollider2D>()))
@@ -241,12 +274,13 @@ public class PlayerController : MonoBehaviour
             groundcheck = true;
             coyotetimer = 0;
             walljump = true;
+            
             return true;
         }
-
+        //this if statement checks to see if a wall jump is possible
         else if(!pb.IsTouching(ground.GetComponent<CompositeCollider2D>()) && (rb.IsTouching(ground.GetComponent<CompositeCollider2D>())))
         {
-            //Debug.Log("touching a wall in the air");
+         
             walljumpcapacity = true;
             groundcheck = false;
             return false;
@@ -260,25 +294,15 @@ public class PlayerController : MonoBehaviour
 
            
     }
-
+    //this code just checks what direction the player is facing based on velocity
     public FacingDirection GetFacingDirection()
     {
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        //if ((rb.linearVelocity.x > 0) && rb.linearVelocity.x>.1f)
-        //{
-        //    lastfaceright = true;
-        //    return FacingDirection.right;
-        //}
         if (Velocity.x>0)
         {
             lastfaceright = true;
             return FacingDirection.right;
         }
-        //else if ((rb.linearVelocity.x < 0) && rb.linearVelocity.x < -.1f)
-        //{
-        //    lastfaceright = false;
-        //    return FacingDirection.left;
-        //}
         else if (Velocity.x<0)
         {
             lastfaceright = false;
