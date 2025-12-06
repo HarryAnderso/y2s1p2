@@ -1,8 +1,12 @@
+using System;
+using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    //goodplayer controlller
+    [Header("Non-walk Properties")]
     public bool lastfaceright = true;
     public GameObject ground;
     public float gravity;
@@ -14,8 +18,22 @@ public class PlayerController : MonoBehaviour
     public float terminalvelocity;
     public float coyotetimer;
     public float coyotetime;
+    public Boolean walljump;
+    public Boolean walljumpcapacity;
+    [Header("Walk properties")]
+    public float acceleration;
+    public float accelerationtime;
+    public float deacceleration;
+    public float deaccelerationtime;
+    public float maxspeed;
+    public float maxspeedtime;
+    public float stoptime;
     public float runspeed;
     public float friction;
+    public float dashtime = 1;
+    public float truemaxspeed;
+    Boolean dashing = false;
+    public float dashingtime = 1.25f;
 
     //public bool IsTouching()
 
@@ -29,11 +47,16 @@ public class PlayerController : MonoBehaviour
     {
         gravity = -2 * apexHeight / (apexTime*apexTime);
         jumpvel = 2 * apexHeight / apexTime;
+
+        acceleration = maxspeed/accelerationtime;
+        deacceleration = maxspeedtime/deaccelerationtime;
+        truemaxspeed = maxspeed;
     }
 
     // Update is called once per frame
     void Update()
     {
+        
         //IsGrounded();
         //The input from the player needs to be determined and
         // then passed in the to the MovementUpdate which should
@@ -51,8 +74,8 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.UpArrow) && (IsGrounded() == false))
         {
-            //playerInput.y = 1f;
-            Debug.Log("Failed jump");
+            playerInput.y = 1f;
+            //Debug.Log("Failed jump");
             //Jumpingmotion(playerInput);
         }
 
@@ -65,6 +88,32 @@ public class PlayerController : MonoBehaviour
         {
             playerInput.x = 1f;
         }
+        if (playerInput.y != 0) Debug.Log(playerInput.y);
+
+        if (Input.GetKey(KeyCode.LeftArrow) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (dashtime == 1))
+        {
+            dashtime = dashingtime;
+            //maxspeed = maxspeed * dashtime;
+            Velocity.x = Velocity.x * 5;
+            playerInput.x = -1f;
+            dashing = true;
+        }
+
+        if (Input.GetKey(KeyCode.RightArrow) && (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (dashtime == 1))
+        {
+            dashtime = dashingtime;
+            //maxspeed = maxspeed * dashtime;
+            Velocity.x = Velocity.x * 5;
+            playerInput.x = 1f;
+            dashing = true;
+        }
+
+
+
+
+
+
+
 
         if (((Input.GetKey(KeyCode.LeftArrow) == false) && (Input.GetKey(KeyCode.RightArrow) == false)))
         {
@@ -84,6 +133,16 @@ public class PlayerController : MonoBehaviour
             playerInput.y = 0;
         }
 
+        if(dashtime>1) dashtime -= Time.deltaTime;
+        if (dashtime < 1)
+        {
+            dashing = false;
+            dashtime = 1;
+            maxspeed = truemaxspeed;
+        }
+        
+
+
     }
 
         
@@ -102,6 +161,12 @@ public class PlayerController : MonoBehaviour
             Velocity.y = jumpvel;
         }
 
+        else if(!IsGrounded() && walljumpcapacity && walljump && playerInput.y==1)
+        {
+            Debug.Log("Wall JUMP!");
+            Velocity.y = jumpvel;
+            walljump = false;
+        }
 
         else if (!IsGrounded())
         {
@@ -119,24 +184,29 @@ public class PlayerController : MonoBehaviour
         }
 
         //Problem Code
-        else if (IsGrounded() && playerInput.y ==0 && Velocity.y<0)
-        { 
+        else if (IsGrounded() && playerInput.y == 0 && Velocity.y < 0)
+        {
             Velocity.y = 0f;
         }
 
         if (playerInput.x != 0)
         {
-            Velocity.x = runspeed * playerInput.x;
+            if (Mathf.Sign(playerInput.x) != Mathf.Sign(Velocity.x)) Velocity.x *= -1;
+            Velocity.x += acceleration * playerInput.x*Time.deltaTime;
+            if (dashing == false) Velocity.x = Mathf.Clamp(Velocity.x, -maxspeed, maxspeed);
+            
         }
         else if (playerInput.x == 0 && Velocity.x != 0)
         {
-            Velocity.x -= (friction * (Velocity.x / Mathf.Abs(Velocity.x)) * Time.deltaTime);
-
+            //Velocity.x -= (friction * (Velocity.x / Mathf.Abs(Velocity.x)) * Time.deltaTime);
+            Velocity.x += -Mathf.Sign(Velocity.x) * deacceleration * Time.fixedDeltaTime;
             if (Mathf.Abs(Velocity.x) < 0.2f)
             {
                 Velocity.x = 0;
             }
         }
+        if (Velocity.x == float.NaN) Velocity.x = 0;
+
             transform.position += Velocity * Time.deltaTime;
         //    Rigidbody2D rb = GetComponent<Rigidbody2D>();
         //rb.AddForce(playerInput, ForceMode2D.Force);
@@ -164,11 +234,22 @@ public class PlayerController : MonoBehaviour
     public bool IsGrounded()
     {
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
-        if (rb.IsTouching(ground.GetComponent<CompositeCollider2D>()))
+        PolygonCollider2D pb = GetComponent<PolygonCollider2D>();
+        //if (rb.IsTouching(ground.GetComponent<CompositeCollider2D>()))
+        if (pb.IsTouching(ground.GetComponent<CompositeCollider2D>()) && (rb.IsTouching(ground.GetComponent<CompositeCollider2D>())))
         {
             groundcheck = true;
             coyotetimer = 0;
+            walljump = true;
             return true;
+        }
+
+        else if(!pb.IsTouching(ground.GetComponent<CompositeCollider2D>()) && (rb.IsTouching(ground.GetComponent<CompositeCollider2D>())))
+        {
+            //Debug.Log("touching a wall in the air");
+            walljumpcapacity = true;
+            groundcheck = false;
+            return false;
         }
         else
         {
